@@ -130,22 +130,24 @@ function __bobthefish_git_project_dir -S -d 'Print the current git project base 
   pushd $git_dir
   set git_dir $PWD
   popd
-
-  switch $PWD/
-    case $git_dir/\*
-      # Nothing works quite right if we're inside the git dir
-      # TODO: fix the underlying issues then re-enable the stuff below
-
-      # # if we're inside the git dir, sweet. just return that.
-      # set -l toplevel (command git rev-parse --show-toplevel 2>/dev/null)
-      # if [ "$toplevel" ]
-      #   switch $git_dir/
-      #     case $toplevel/\*
-      #       echo $git_dir
-      #   end
-      # end
-      return
-  end
+set -l in_hidden (command git rev-parse --is-inside-git-dir)
+if [ "$in_hidden" =  'true' ]
+    #We're inside .git
+    set -l child_commit (command git rev-list --parents HEAD | tail -1 2>/dev/null)
+    #Let's check the root directory now
+    #Get commit from root directory
+    pushd ".."
+    set -l root_dir $PWD
+    set -l root_commit (command git rev-list --parents HEAD | tail -1 2>/dev/null)
+    popd
+    #Compare
+    if [ "$root_commit" = "$child_commit" ]
+        set -l git_dir $root_dir	
+	set -l project_dir (__bobthefish_dirname $git_dir)
+	echo $project_dir
+        return
+    end 
+end
 
   set -l project_dir (__bobthefish_dirname $git_dir)
 
